@@ -1170,30 +1170,64 @@ body {
 }
 
 /* ============================================
-   Responsive — ensure iPad landscape fills
+   Responsive Layout & Mobile Overhaul
    ============================================ */
 @media (orientation: portrait) {
   .game-board.players-4 {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
   }
 
   .game-board.players-5 {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
   }
 
-  .game-board.players-5 .player-quadrant:nth-child(4),
+  /* Player 5 spans both columns at the bottom */
   .game-board.players-5 .player-quadrant:nth-child(5) {
-    grid-column: auto;
+    grid-column: 1 / -1;
   }
+}
 
-  .player-quadrant.rotated {
-    transform: rotate(180deg);
-  }
-
+/* Mobile-specific sizing (small screens like iPhones) */
+@media (max-width: 767px) {
   .life-total {
-    font-size: clamp(4rem, 14vw, 7rem);
+    font-size: clamp(3rem, 18vw, 5.5rem) !important;
+  }
+  
+  .player-name {
+    font-size: clamp(0.7rem, 2vw, 1rem) !important;
+  }
+
+  .counter-pill {
+    padding: 2px 6px;
+    font-size: 0.9rem;
+    gap: 3px;
+  }
+  
+  .counter-pill .icon {
+    font-size: 1rem;
+  }
+
+  .life-action {
+    width: 25% !important;
+  }
+  
+  /* Make settings and setup scrollable so they don't get cut off on short screens */
+  .setup-container, .settings-content {
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: var(--gap-md);
+  }
+  
+  .hud-bar {
+    gap: 4px;
+    padding: 6px;
+  }
+  
+  .hud-btn {
+    padding: 8px 12px;
+    font-size: 1.1rem;
   }
 }
 
