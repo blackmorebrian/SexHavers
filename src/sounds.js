@@ -27,7 +27,8 @@ const EXTERNAL_SOUNDS_CONFIG = {
     '/sounds/Life Loss/punch_u4LmMsr.mp3'
   ],
   commanderDamage: [
-    '/sounds/Commander Damage/strongpunch.mp3'
+    '/sounds/Commander Damage/strongpunch.mp3',
+    '/sounds/Commander Damage/FAH.mp3'
   ],
   poison: [
     '/sounds/Poison/perfect-fart.mp3',
@@ -38,6 +39,9 @@ const EXTERNAL_SOUNDS_CONFIG = {
     '/sounds/Death/metal_gear_solid_game_over_screen_clean_background-1.mp3',
     '/sounds/Death/ipushmyfingersintomy2.mp3',
     '/sounds/Death/super-mario-death-sound-sound-effect_cRFULVj.mp3'
+  ],
+  goop: [
+    '/sounds/GOOP/lancer-splat.mp3'
   ]
 };
 
@@ -64,7 +68,8 @@ class SoundEngine {
       lifeLoss: [],
       commanderDamage: [],
       poison: [],
-      death: []
+      death: [],
+      goop: []
     };
   }
 
@@ -694,6 +699,14 @@ class SoundEngine {
     sub.connect(subGain).connect(this._master);
     sub.start(t);
     sub.stop(t + 0.62);
+  }
+
+  /**
+   * Plays the rare GOOP combo sound effect
+   */
+  playGoop() {
+    this._ensureContext();
+    if (this._playExternal('goop', 1.0)) return;
   }
 
   /**

@@ -240,6 +240,45 @@ body {
   min-width: 24px;
 }
 
+.setup-minimap {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  gap: 2px;
+  opacity: 0.9;
+}
+
+.setup-minimap.players-4 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.setup-minimap.players-5 {
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.minimap-cell {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  transition: all var(--transition-fast);
+}
+
+.minimap-cell.active {
+  background: var(--active-color, #fff);
+  box-shadow: 0 0 6px var(--active-color, transparent);
+}
+
+@media (orientation: portrait) {
+  .setup-minimap.players-5 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+  }
+  .setup-minimap.players-5 .minimap-cell:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+}
+
 .player-name-input {
   flex: 1;
   padding: 10px 14px;
@@ -485,24 +524,27 @@ body {
 /* Change indicator */
 .life-change-indicator {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: 35%;
+  right: 15%;
+  transform: translateY(-50%) scale(0.8);
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 2rem;
+  font-size: 2.5rem;
   pointer-events: none;
   opacity: 0;
   z-index: 10;
+  transition: all 0.2s var(--ease-out-expo);
 }
 
 .life-change-indicator.show-gain {
-  animation: floatUpGain 0.7s var(--ease-out-expo) forwards;
+  opacity: 1;
+  transform: translateY(-80%) scale(1.2);
   color: #4ADE80;
 }
 
 .life-change-indicator.show-loss {
-  animation: floatUpLoss 0.7s var(--ease-out-expo) forwards;
+  opacity: 1;
+  transform: translateY(-20%) scale(1.2);
   color: var(--color-crimson);
 }
 
@@ -650,6 +692,33 @@ body {
   display: flex;
   align-items: center;
   gap: var(--gap-sm);
+  position: relative;
+}
+
+.cmd-change-indicator {
+  position: absolute;
+  top: 50%;
+  right: -40px;
+  transform: translateY(-50%);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.5rem;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 20;
+  transition: all 0.2s var(--ease-out-expo);
+}
+
+.cmd-change-indicator.show-gain {
+  opacity: 1;
+  transform: translateY(-80%);
+  color: #4ADE80;
+}
+
+.cmd-change-indicator.show-loss {
+  opacity: 1;
+  transform: translateY(-20%);
+  color: var(--color-crimson);
 }
 
 .cmd-btn {
@@ -1327,4 +1396,58 @@ body {
 .modal-btn.confirm:hover {
   background: rgba(255, 34, 68, 0.25);
   transform: translateY(-2px);
+}
+
+/* GOOP Effect */
+.goop-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.goop-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.1);
+  font-family: var(--font-extreme);
+  font-size: clamp(4rem, 10vw, 8rem);
+  color: #fff;
+  -webkit-text-stroke: 3px #000;
+  paint-order: stroke fill;
+  text-shadow: 0 4px 20px rgba(255, 255, 255, 0.5), 0 0 10px rgba(255, 255, 255, 0.8), 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+  opacity: 0;
+  animation: goopTextAnim 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  z-index: 3;
+}
+
+@keyframes goopTextAnim {
+  0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
+  10% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  15% { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+  80% { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
+}
+
+.goop-splatter {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, #ffffff 30%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0) 70%);
+  border-radius: 50%;
+  filter: blur(1px) contrast(2);
+  opacity: 0;
+  transform: scale(0.1);
+  animation: goopSplatAnim 1.8s ease-out forwards;
+  z-index: 1;
+}
+
+@keyframes goopSplatAnim {
+  0% { transform: scale(0.1) rotate(var(--rot)); opacity: 0; }
+  10% { transform: scale(var(--s)) rotate(var(--rot)); opacity: 0.9; }
+  80% { transform: scale(var(--s)) rotate(var(--rot)); opacity: 0.9; }
+  100% { transform: scale(calc(var(--s) * 1.1)) rotate(var(--rot)); opacity: 0; }
 }

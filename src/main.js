@@ -384,6 +384,14 @@ function renderSplash() {
 function renderSetup() {
   const playerConfigs = [];
   for (let i = 0; i < gameState.playerCount; i++) {
+    const selectedColorHex = PLAYER_COLORS[DEFAULT_PLAYER_COLORS[i]].hex;
+    
+    // Generate minimap cells
+    const minimapCells = Array.from({ length: gameState.playerCount }).map((_, cellIdx) => {
+      const isActive = cellIdx === i;
+      return `<div class="minimap-cell ${isActive ? 'active' : ''}" style="${isActive ? `--active-color: ${selectedColorHex};` : ''}" id="minimap-cell-${i}-${cellIdx}"></div>`;
+    }).join('');
+
     const colorSwatches = PLAYER_COLORS.map((c, ci) => `
       <div class="color-swatch ${ci === DEFAULT_PLAYER_COLORS[i] ? 'active' : ''}"
            style="background: ${c.hex};"
@@ -393,6 +401,9 @@ function renderSetup() {
 
     playerConfigs.push(`
       <div class="player-config-row" id="player-row-${i}">
+        <div class="setup-minimap players-${gameState.playerCount}">
+          ${minimapCells}
+        </div>
         <span class="player-number">${i + 1}</span>
         <input type="text" class="player-name-input"
                id="player-name-${i}"
@@ -464,6 +475,12 @@ function renderSetup() {
         s.classList.remove('active');
       });
       swatch.classList.add('active');
+      
+      // Update the minimap highlight color
+      const activeCell = document.getElementById(`minimap-cell-${playerIdx}-${playerIdx}`);
+      if (activeCell) {
+        activeCell.style.setProperty('--active-color', PLAYER_COLORS[colorIdx].hex);
+      }
     });
   });
 
@@ -589,6 +606,7 @@ function renderCommanderPanel(player) {
           <span class="cmd-damage-value ${dmg >= COMMANDER_LETHAL ? 'lethal' : ''}"
                 id="cmd-val-${player.id}-${oppId}">${dmg}</span>
           <button class="cmd-btn" data-player="${player.id}" data-opponent="${oppId}" data-action="cmd-plus">+</button>
+          <div class="cmd-change-indicator" id="cmd-indicator-${player.id}-${oppId}"></div>
         </div>
       </div>
     `;
@@ -748,15 +766,32 @@ function attachGameListeners() {
         sound.playButtonClick();
       }
 
-      const justDied = checkDeath(player);
-      if (justDied) sound.playDeath();
+      // Update DOM directly instead of full re-render
+      document.getElementById(`poison-value-${playerIdx}`).textContent = player.poison;
+      document.getElementById(`poison-pill-${playerIdx}`).querySelector('span:last-child').textContent = player.poison;
+      
+      const pill = document.getElementById(`poison-pill-${playerIdx}`);
+      const quadrant = document.getElementById(`quadrant-${playerIdx}`);
+      
+      if (player.poison > 0) {
+        pill.classList.add('active');
+        quadrant.classList.add('poisoned');
+      } else {
+        pill.classList.remove('active');
+        quadrant.classList.remove('poisoned');
+      }
+      
+      if (player.poison >= POISON_LETHAL) {
+        document.getElementById(`poison-value-${playerIdx}`).classList.add('lethal');
+      } else {
+        document.getElementById(`poison-value-${playerIdx}`).classList.remove('lethal');
+      }
 
-      renderGameBoard();
-      // Re-open the poison panel
-      setTimeout(() => {
-        const panel = document.getElementById(`poison-panel-${playerIdx}`);
-        if (panel && !player.isDead) panel.classList.add('open');
-      }, 10);
+      const justDied = checkDeath(player);
+      if (justDied) {
+        sound.playDeath();
+        renderGameBoard();
+      }
     });
   });
 
@@ -782,37 +817,84 @@ function attachGameListeners() {
         player.commanderDamage[oppIdx]++;
         sound.playCommanderDamage();
 
-        // Auto-deduct life
-        if (gameState.settings.autoDeductCommanderDamage) {
-          player.life--;
-        }
-
-        // Screen shake on commander damage!
+        // Screen shake on commander damage
         const board = document.getElementById('game-board');
+        board.classList.remove('screen-shake');
+        void board.offsetWidth;
         board.classList.add('screen-shake');
         setTimeout(() => board.classList.remove('screen-shake'), 400);
 
         // Flash gold
         const quadrant = document.getElementById(`quadrant-${playerIdx}`);
+        quadrant.classList.remove('flash-gold');
+        void quadrant.offsetWidth;
         quadrant.classList.add('flash-gold');
         setTimeout(() => quadrant.classList.remove('flash-gold'), 400);
+
+        // Auto-deduct life
+        if (gameState.settings.autoDeductCommanderDamage) {
+          doLifeChange(playerIdx, -1, false);
+        }
       } else {
         player.commanderDamage[oppIdx] = Math.max(0, player.commanderDamage[oppIdx] - 1);
-        if (gameState.settings.autoDeductCommanderDamage) {
-          player.life++;
-        }
         sound.playButtonClick();
+        
+        if (gameState.settings.autoDeductCommanderDamage) {
+          doLifeChange(playerIdx, 1, false);
+        }
+      }
+
+      // Indicator logic
+      const indicatorId = `cmd-indicator-${playerIdx}-${oppIdx}`;
+      const indicatorEl = document.getElementById(indicatorId);
+      const amount = btn.dataset.action === 'cmd-plus' ? 1 : -1;
+      
+      if (indicatorEl) {
+        if (!lifeChangeAccumulators[indicatorId]) {
+          lifeChangeAccumulators[indicatorId] = { total: 0, timerId: null };
+        }
+        const acc = lifeChangeAccumulators[indicatorId];
+        acc.total += amount;
+
+        if (acc.timerId) clearTimeout(acc.timerId);
+
+        indicatorEl.textContent = acc.total > 0 ? `+${acc.total}` : `${acc.total}`;
+        
+        const activeClass = acc.total > 0 ? 'show-gain' : 'show-loss';
+        const inactiveClass = acc.total > 0 ? 'show-loss' : 'show-gain';
+        
+        indicatorEl.classList.remove(inactiveClass);
+        indicatorEl.classList.add(activeClass);
+
+        acc.timerId = setTimeout(() => {
+          acc.total = 0;
+          indicatorEl.classList.remove('show-gain', 'show-loss');
+        }, 1500);
+      }
+
+      // Update DOM directly instead of full re-render
+      const totalCmdDmg = Object.values(player.commanderDamage).reduce((a, b) => a + b, 0);
+      document.getElementById(`cmd-val-${playerIdx}-${oppIdx}`).textContent = player.commanderDamage[oppIdx];
+      document.getElementById(`cmd-pill-${playerIdx}`).querySelector('span:last-child').textContent = totalCmdDmg;
+      
+      const pill = document.getElementById(`cmd-pill-${playerIdx}`);
+      if (totalCmdDmg > 0) {
+        pill.classList.add('active');
+      } else {
+        pill.classList.remove('active');
+      }
+      
+      if (player.commanderDamage[oppIdx] >= COMMANDER_LETHAL) {
+        document.getElementById(`cmd-val-${playerIdx}-${oppIdx}`).classList.add('lethal');
+      } else {
+        document.getElementById(`cmd-val-${playerIdx}-${oppIdx}`).classList.remove('lethal');
       }
 
       const justDied = checkDeath(player);
-      if (justDied) sound.playDeath();
-
-      renderGameBoard();
-      // Re-open the commander panel
-      setTimeout(() => {
-        const panel = document.getElementById(`cmd-panel-${playerIdx}`);
-        if (panel && !player.isDead) panel.classList.add('open');
-      }, 10);
+      if (justDied) {
+        sound.playDeath();
+        renderGameBoard();
+      }
     });
   });
 
@@ -957,10 +1039,35 @@ function doLifeChange(playerIdx, amount, isHeavy) {
   }
 
   if (indicatorEl) {
-    indicatorEl.textContent = amount > 0 ? `+${amount}` : `${amount}`;
-    indicatorEl.classList.remove('show-gain', 'show-loss');
-    void indicatorEl.offsetWidth;
-    indicatorEl.classList.add(amount > 0 ? 'show-gain' : 'show-loss');
+    if (!lifeChangeAccumulators[playerIdx]) {
+      lifeChangeAccumulators[playerIdx] = { total: 0, timerId: null };
+    }
+    const acc = lifeChangeAccumulators[playerIdx];
+    acc.total += amount;
+
+    if (acc.timerId) {
+      clearTimeout(acc.timerId);
+    }
+
+    indicatorEl.textContent = acc.total > 0 ? `+${acc.total}` : `${acc.total}`;
+    
+    // Add the class (don't force reflow so it stays smoothly on screen)
+    const activeClass = acc.total > 0 ? 'show-gain' : 'show-loss';
+    const inactiveClass = acc.total > 0 ? 'show-loss' : 'show-gain';
+    
+    indicatorEl.classList.remove(inactiveClass);
+    indicatorEl.classList.add(activeClass);
+
+    // Set a timeout to fade it out and reset the accumulator
+    acc.timerId = setTimeout(() => {
+      // GOOP EFFECT CHECK
+      if (acc.total <= -5 && Math.random() < 0.20) {
+        renderGoopEffect(playerIdx);
+      }
+
+      acc.total = 0;
+      indicatorEl.classList.remove('show-gain', 'show-loss');
+    }, 1500);
   }
 
   if (quadrant) {
@@ -978,9 +1085,50 @@ function doLifeChange(playerIdx, amount, isHeavy) {
   }
 }
 
+function renderGoopEffect(playerIdx) {
+  const quadrant = document.getElementById(`quadrant-${playerIdx}`);
+  if (!quadrant) return;
+
+  sound.playGoop();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'goop-overlay';
+  
+  const text = document.createElement('div');
+  text.className = 'goop-text';
+  text.textContent = 'GOOPED';
+  overlay.appendChild(text);
+
+  const numSplatters = Math.floor(Math.random() * 3) + 4; // 4 to 6 splatters
+  for (let i = 0; i < numSplatters; i++) {
+    const splat = document.createElement('div');
+    splat.className = 'goop-splatter';
+    
+    const top = Math.random() * 80 + 10;
+    const left = Math.random() * 80 + 10;
+    const scale = Math.random() * 1.5 + 0.5;
+    const rot = Math.random() * 360;
+    
+    splat.style.top = `${top}%`;
+    splat.style.left = `${left}%`;
+    splat.style.setProperty('--s', scale);
+    splat.style.setProperty('--rot', `${rot}deg`);
+    
+    overlay.appendChild(splat);
+  }
+
+  quadrant.appendChild(overlay);
+
+  setTimeout(() => {
+    overlay.remove();
+  }, 2000);
+}
+
 // ============================================================================
 // Bootstrap
 // ============================================================================
+
+const lifeChangeAccumulators = {};
 
 // Start on splash screen
 renderSplash();
