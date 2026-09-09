@@ -1130,8 +1130,8 @@ function renderPositiveGoopEffect(playerIdx) {
   const quadrant = document.getElementById(`quadrant-${playerIdx}`);
   if (!quadrant) return;
 
-  // Play a powerful life gain sound for the combo
-  sound.playLifeGainHeavy();
+  // Play the splurt sound
+  sound.playSplurt();
 
   const overlay = document.createElement('div');
   overlay.className = 'goop-overlay';

@@ -42,6 +42,9 @@ const EXTERNAL_SOUNDS_CONFIG = {
   ],
   goop: [
     '/sounds/GOOP/lancer-splat.mp3'
+  ],
+  splurt: [
+    '/sounds/Splurted/Bootyhole Brown.mp3'
   ]
 };
 
@@ -69,7 +72,8 @@ class SoundEngine {
       commanderDamage: [],
       poison: [],
       death: [],
-      goop: []
+      goop: [],
+      splurt: []
     };
   }
 
@@ -707,6 +711,14 @@ class SoundEngine {
   playGoop() {
     this._ensureContext();
     if (this._playExternal('goop', 1.0)) return;
+  }
+
+  /**
+   * Plays the rare SPLURT combo sound effect
+   */
+  playSplurt() {
+    this._ensureContext();
+    if (this._playExternal('splurt', 1.0)) return;
   }
 
   /**
