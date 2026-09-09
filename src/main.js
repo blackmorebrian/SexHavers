@@ -1063,6 +1063,8 @@ function doLifeChange(playerIdx, amount, isHeavy) {
       // GOOP EFFECT CHECK
       if (acc.total <= -5 && Math.random() < 0.20) {
         renderGoopEffect(playerIdx);
+      } else if (acc.total >= 5 && Math.random() < 0.20) {
+        renderPositiveGoopEffect(playerIdx);
       }
 
       acc.total = 0;
@@ -1103,6 +1105,46 @@ function renderGoopEffect(playerIdx) {
   for (let i = 0; i < numSplatters; i++) {
     const splat = document.createElement('div');
     splat.className = 'goop-splatter';
+    
+    const top = Math.random() * 80 + 10;
+    const left = Math.random() * 80 + 10;
+    const scale = Math.random() * 1.5 + 0.5;
+    const rot = Math.random() * 360;
+    
+    splat.style.top = `${top}%`;
+    splat.style.left = `${left}%`;
+    splat.style.setProperty('--s', scale);
+    splat.style.setProperty('--rot', `${rot}deg`);
+    
+    overlay.appendChild(splat);
+  }
+
+  quadrant.appendChild(overlay);
+
+  setTimeout(() => {
+    overlay.remove();
+  }, 2000);
+}
+
+function renderPositiveGoopEffect(playerIdx) {
+  const quadrant = document.getElementById(`quadrant-${playerIdx}`);
+  if (!quadrant) return;
+
+  // Play a powerful life gain sound for the combo
+  sound.playLifeGainHeavy();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'goop-overlay';
+  
+  const text = document.createElement('div');
+  text.className = 'goop-text positive';
+  text.textContent = 'SPLURTED';
+  overlay.appendChild(text);
+
+  const numSplatters = Math.floor(Math.random() * 3) + 4; // 4 to 6 splatters
+  for (let i = 0; i < numSplatters; i++) {
+    const splat = document.createElement('div');
+    splat.className = 'goop-splatter positive';
     
     const top = Math.random() * 80 + 10;
     const left = Math.random() * 80 + 10;
